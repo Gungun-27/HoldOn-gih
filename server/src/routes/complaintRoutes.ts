@@ -11,6 +11,7 @@ import { supabaseAdmin } from '../lib/supabase.js';
 import { logger } from '../logger.js';
 import { AuthenticatedRequest, authenticateToken, requireAuth, requireOfficer } from '../middleware/auth.js';
 import { canonicalizeJson, computeSha256 } from '../utils/crypto.js';
+import { sendStatusChangeEmail } from '../services/emailService.js';
 
 export const complaintRouter = Router();
 
@@ -107,6 +108,15 @@ complaintRouter.post('/', authenticateToken, requireAuth, async (req: Authentica
     });
 
     logger.info({ ref: complaint.ref, id: complaint.id }, 'Complaint filed successfully');
+
+    // Send confirmation email (fire-and-forget, FR-22)
+    sendStatusChangeEmail({
+      ref: complaint.ref,
+      complainantName: input.complainant_name,
+      complainantEmail: input.complainant_email.toLowerCase(),
+      newStatus: 'Submitted',
+      reportHash: reportHash,
+    });
 
     return res.status(201).json({
       success: true,
@@ -281,6 +291,16 @@ complaintRouter.post('/:id/transition', authenticateToken, requireAuth, requireO
       .order('created_at', { ascending: true });
 
     logger.info({ id, ref: updatedComplaint.ref, from: currentStatus, to: nextStatus, actor: req.user?.id }, 'Status transition completed');
+
+    // Send status-change email to complainant (fire-and-forget, FR-22)
+    sendStatusChangeEmail({
+      ref: updatedComplaint.ref,
+      complainantName: updatedComplaint.complainant_name || 'Citizen',
+      complainantEmail: updatedComplaint.complainant_email,
+      newStatus: nextStatus,
+      note: note?.trim() || undefined,
+      reportHash: updatedComplaint.report_hash || undefined,
+    });
 
     return res.json({
       success: true,
