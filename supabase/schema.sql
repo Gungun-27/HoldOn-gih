@@ -208,7 +208,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ============================================================
 -- 5. AGGREGATE VIEW FOR MAP (P2, included for completeness)
 -- ============================================================
-CREATE OR REPLACE VIEW complaint_geo_agg AS
+DROP VIEW IF EXISTS complaint_geo_agg CASCADE;
+CREATE VIEW complaint_geo_agg AS
 SELECT
   state,
   COUNT(*) AS complaint_count,

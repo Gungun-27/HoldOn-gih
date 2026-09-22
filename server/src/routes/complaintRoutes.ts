@@ -1,9 +1,11 @@
 import {
   ComplaintStatus,
+  ComplaintStatusSchema,
   CreateComplaintSchema,
   getNextAllowedStatus,
   isValidStatusTransition,
 } from '@holdon/shared';
+import { z } from 'zod';
 import { Router } from 'express';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { logger } from '../logger.js';
@@ -199,14 +201,28 @@ complaintRouter.get('/', authenticateToken, async (req: AuthenticatedRequest, re
   }
 });
 
+// Zod schema for transition request body
+const TransitionRequestSchema = z.object({
+  nextStatus: ComplaintStatusSchema,
+  note: z.string().max(500).optional(),
+});
+
 // POST /api/complaints/:id/transition - advance status with server-enforced validation (FR-20)
 complaintRouter.post('/:id/transition', authenticateToken, requireAuth, requireOfficer, async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
-  const { nextStatus, note } = req.body ?? {};
 
-  if (!nextStatus) {
-    return res.status(400).json({ error: 'Missing nextStatus in request body' });
+  // Validate request body with Zod
+  const parsed = TransitionRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    logger.warn({ id, body: req.body, errors: parsed.error.format() }, 'Invalid transition request body');
+    return res.status(400).json({
+      error: 'Validation failed',
+      message: 'nextStatus must be a valid complaint status',
+      details: parsed.error.format(),
+    });
   }
+
+  const { nextStatus, note } = parsed.data;
 
   try {
     // 1. Fetch current complaint
@@ -224,6 +240,7 @@ complaintRouter.post('/:id/transition', authenticateToken, requireAuth, requireO
     const currentStatus = complaint.status as ComplaintStatus;
     if (!isValidStatusTransition(currentStatus, nextStatus)) {
       const allowed = getNextAllowedStatus(currentStatus);
+      logger.warn({ id, from: currentStatus, to: nextStatus, actor: req.user?.id }, 'Rejected illegal status transition');
       return res.status(400).json({
         error: 'Illegal status transition',
         message: `Illegal transition: cannot move from '${currentStatus}' to '${nextStatus}'. Only sequential forward transition allowed: '${allowed || 'None (terminal state)'}'.`,
@@ -246,7 +263,7 @@ complaintRouter.post('/:id/transition', authenticateToken, requireAuth, requireO
     }
 
     // 4. Append audit event to complaint_events
-    const { data: event } = await supabaseAdmin
+    await supabaseAdmin
       .from('complaint_events')
       .insert({
         complaint_id: id,
@@ -254,16 +271,23 @@ complaintRouter.post('/:id/transition', authenticateToken, requireAuth, requireO
         actor_id: req.user?.id || null,
         actor_role: 'officer',
         note: note?.trim() || `Status advanced to ${nextStatus}`,
-      })
-      .select('*')
-      .single();
+      });
 
-    logger.info({ id, from: currentStatus, to: nextStatus, actor: req.user?.id }, 'Status transition completed');
+    // 5. Fetch full complaint with all events for response
+    const { data: events } = await supabaseAdmin
+      .from('complaint_events')
+      .select('*')
+      .eq('complaint_id', id)
+      .order('created_at', { ascending: true });
+
+    logger.info({ id, ref: updatedComplaint.ref, from: currentStatus, to: nextStatus, actor: req.user?.id }, 'Status transition completed');
 
     return res.json({
       success: true,
-      complaint: updatedComplaint,
-      event,
+      complaint: {
+        ...updatedComplaint,
+        events: events || [],
+      },
     });
   } catch (err: any) {
     logger.error({ err }, 'Exception in /:id/transition');
