@@ -228,7 +228,8 @@ export const AppShell: React.FC<AppShellProps> = ({
           aria-label="Main navigation"
         >
           {NAV_ITEMS.map((item) => {
-            if (item.officerOnly && !isOfficer) return null;
+            // Officer tab: visible to all authenticated users (console itself gates access)
+            if (item.officerOnly && !user) return null;
             const isActive = activeNav === item.id;
             return (
               <button
@@ -262,7 +263,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           className="md:hidden fixed bottom-0 inset-x-0 bg-surface border-t border-border z-20 flex items-center justify-around h-14"
           aria-label="Main navigation"
         >
-          {NAV_ITEMS.filter((item) => !item.officerOnly || isOfficer).slice(0, 5).map((item) => {
+          {NAV_ITEMS.filter((item) => !item.officerOnly || user).slice(0, 5).map((item) => {
             const isActive = activeNav === item.id;
             return (
               <button

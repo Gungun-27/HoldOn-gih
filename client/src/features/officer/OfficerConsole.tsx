@@ -7,8 +7,10 @@ import {
 import {
   AlertCircle,
   ArrowRight,
+  Check,
   CheckCircle2,
   ChevronRight,
+  Clock,
   Filter,
   RefreshCw,
   Search,
@@ -487,6 +489,49 @@ export const OfficerConsole: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* AUDIT EVENT TIMELINE */}
+            {selectedComplaint.events && selectedComplaint.events.length > 0 && (
+              <div className="pt-4 border-t border-border space-y-3">
+                <span className="text-xs font-semibold text-text">Audit Timeline</span>
+                <div className="relative pl-5 space-y-4">
+                  {selectedComplaint.events.map((evt, idx) => {
+                    const isLast = idx === selectedComplaint.events!.length - 1;
+                    return (
+                      <div key={evt.id} className="relative flex items-start gap-3">
+                        {/* Connecting line */}
+                        {!isLast && (
+                          <div className="absolute -left-5 top-5 bottom-[-1rem] w-0.5 bg-border" />
+                        )}
+                        {/* Dot */}
+                        <div className={`absolute -left-5 top-1 -translate-x-1/2 w-4 h-4 rounded-full flex items-center justify-center ${
+                          isLast
+                            ? 'border-2 border-accent bg-surface-2'
+                            : 'bg-accent'
+                        }`}>
+                          {!isLast && <Check className="w-2.5 h-2.5 text-surface stroke-[3]" />}
+                          {isLast && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
+                        </div>
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-medium text-text">{evt.status}</span>
+                            <span className="text-[10px] text-muted flex items-center gap-1 shrink-0">
+                              <Clock className="w-3 h-3" />
+                              {new Date(evt.created_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                            </span>
+                          </div>
+                          {evt.note && (
+                            <p className="text-[11px] text-muted mt-0.5 leading-relaxed">{evt.note}</p>
+                          )}
+                          <span className="text-[10px] text-muted/60">{evt.actor_role}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
