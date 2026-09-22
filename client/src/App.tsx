@@ -1,5 +1,5 @@
 import { AnalyzeResponse, Region } from '@holdon/shared';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActiveNavTab, AppShell } from './components/AppShell.js';
 import { Footer } from './components/Footer.js';
 import { AuthProvider } from './contexts/AuthContext.js';
@@ -8,6 +8,7 @@ import { ComplaintForm } from './features/complaints/ComplaintForm.js';
 import { LandingPage } from './features/landing/LandingPage.js';
 import { OfficerConsole } from './features/officer/OfficerConsole.js';
 import { TrackingView } from './features/tracking/TrackingView.js';
+import { VerifyPage } from './features/verify/VerifyPage.js';
 
 const MainApp: React.FC = () => {
   const [region, setRegion] = useState<Region>('IN');
@@ -18,6 +19,31 @@ const MainApp: React.FC = () => {
     analysis?: AnalyzeResponse | null;
   }>({});
   const [trackRef, setTrackRef] = useState<string | null>(null);
+  const [verifyHash, setVerifyHash] = useState<string | null>(null);
+
+  // Check URL on load for /verify/:hash or /verify
+  useEffect(() => {
+    const pathname = window.location.pathname;
+    const match = pathname.match(/^\/verify(?:\/([a-zA-Z0-9_-]+))?/);
+    if (match) {
+      if (match[1]) setVerifyHash(match[1]);
+      setActiveNav('verify');
+      setView('app');
+    }
+
+    const handleNavVerify = (e: any) => {
+      const hash = e.detail;
+      if (hash) setVerifyHash(hash);
+      setActiveNav('verify');
+      setView('app');
+      window.history.pushState(null, '', hash ? `/verify/${hash}` : '/verify');
+    };
+
+    window.addEventListener('holdon:navigate-verify', handleNavVerify);
+    return () => {
+      window.removeEventListener('holdon:navigate-verify', handleNavVerify);
+    };
+  }, []);
 
   if (view === 'landing') {
     return (
@@ -44,6 +70,9 @@ const MainApp: React.FC = () => {
       activeNav={activeNav}
       onNavChange={(tab) => {
         setActiveNav(tab);
+        if (tab !== 'verify' && window.location.pathname.startsWith('/verify')) {
+          window.history.pushState(null, '', '/');
+        }
       }}
     >
       <div className="min-h-[calc(100vh-3.5rem)] flex flex-col justify-between">
@@ -75,6 +104,10 @@ const MainApp: React.FC = () => {
 
           {activeNav === 'officer' && (
             <OfficerConsole />
+          )}
+
+          {activeNav === 'verify' && (
+            <VerifyPage initialHash={verifyHash} />
           )}
 
           {activeNav === 'help' && (

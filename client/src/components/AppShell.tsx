@@ -10,6 +10,7 @@ import {
   Settings,
   Shield,
   ShieldAlert,
+  ShieldCheck,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.js';
@@ -17,7 +18,7 @@ import { AuthModal } from './auth/AuthModal.js';
 import { OnboardingModal } from './onboarding/OnboardingModal.js';
 import { Button } from './ui/Button.js';
 
-export type ActiveNavTab = 'analyzer' | 'complaints' | 'track' | 'officer' | 'help' | 'settings';
+export type ActiveNavTab = 'analyzer' | 'complaints' | 'track' | 'officer' | 'verify' | 'help' | 'settings';
 
 interface AppShellProps {
   region: Region;
@@ -51,6 +52,7 @@ export const AppShell: React.FC<AppShellProps> = ({
     { id: 'complaints', icon: <FileText className="w-5 h-5" />, label: 'Complaints' },
     { id: 'track', icon: <Shield className="w-5 h-5" />, label: 'Track' },
     { id: 'officer', icon: <ShieldAlert className="w-5 h-5" />, label: 'Officer', officerOnly: true },
+    { id: 'verify', icon: <ShieldCheck className="w-5 h-5" />, label: 'Verify' },
     { id: 'help', icon: <HelpCircle className="w-5 h-5" />, label: 'Help' },
     { id: 'settings', icon: <Settings className="w-5 h-5" />, label: 'Settings' },
   ];

@@ -4,6 +4,7 @@ import {
   Check,
   Clock,
   Copy,
+  FileDown,
   Hash,
   RefreshCw,
   Search,
@@ -14,6 +15,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/Button.js';
 import { useAuth } from '../../contexts/AuthContext.js';
 import { supabase } from '../../lib/supabase.js';
+import { generateReportPDF } from '../complaints/ReportPDF.js';
 
 interface TrackingViewProps {
   initialRef?: string | null;
@@ -29,6 +31,7 @@ export const TrackingView: React.FC<TrackingViewProps> = ({ initialRef }) => {
   const [complaint, setComplaint] = useState<Complaint | null>(null);
   const [userComplaints, setUserComplaints] = useState<Complaint[]>([]);
   const [copiedHash, setCopiedHash] = useState<boolean>(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState<boolean>(false);
 
   // If user is logged in, fetch their submitted complaints list
   const fetchUserComplaints = async () => {
@@ -306,6 +309,43 @@ export const TrackingView: React.FC<TrackingViewProps> = ({ initialRef }) => {
                 >
                   {copiedHash ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy Hash</>}
                 </button>
+              </div>
+            )}
+
+            {/* Report Download & Verify Actions */}
+            {complaint.report_hash && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {COMPLAINT_STATUS_ORDER.indexOf(complaint.status) >= 2 && (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    disabled={isGeneratingPDF}
+                    icon={<FileDown className="w-3.5 h-3.5" />}
+                    onClick={async () => {
+                      setIsGeneratingPDF(true);
+                      try {
+                        await generateReportPDF(complaint);
+                      } catch (err) {
+                        console.error('PDF generation failed:', err);
+                      } finally {
+                        setIsGeneratingPDF(false);
+                      }
+                    }}
+                  >
+                    {isGeneratingPDF ? 'Generating…' : 'Download Report'}
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon={<ShieldCheck className="w-3.5 h-3.5" />}
+                  onClick={() => {
+                    // Navigate to verify view — handled by parent via nav change
+                    window.dispatchEvent(new CustomEvent('holdon:navigate-verify', { detail: complaint.report_hash }));
+                  }}
+                >
+                  Verify Integrity
+                </Button>
               </div>
             )}
           </div>
