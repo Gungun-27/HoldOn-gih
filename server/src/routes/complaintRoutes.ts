@@ -30,7 +30,7 @@ async function generateRef(): Promise<string> {
 }
 
 // POST /api/complaints - create complaint with ref ID and canonical hash
-complaintRouter.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
+complaintRouter.post('/', authenticateToken, requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = CreateComplaintSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -43,7 +43,7 @@ complaintRouter.post('/', authenticateToken, async (req: AuthenticatedRequest, r
     const input = parsed.data;
     const ref = await generateRef();
     const consentAt = new Date().toISOString();
-    const userId = req.user?.id || input.user_id || null;
+    const userId = req.user!.id;
 
     // Build canonical object for tamper-proof hash (PRD FR-18)
     const canonicalPayload = {

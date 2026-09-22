@@ -68,7 +68,7 @@ export const CreateComplaintSchema = z.object({
   incident_at: z.string().optional(),
   state: z.string().min(2, 'State is required'),
   district: z.string().optional(),
-  amount_lost: z.number().min(0).default(0),
+  amount_lost: z.union([z.number(), z.string().transform((v) => Number(v) || 0)]).pipe(z.number().min(0)).default(0),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   masked_excerpt: z.string().optional(),
   analysis_summary: z.any().optional(),
