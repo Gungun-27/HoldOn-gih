@@ -118,6 +118,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) return { error: error.message };
 
+      // In Supabase, if email confirmation is required, data.session is null.
+      if (data.session) {
+        setSession(data.session);
+        setUser(data.user);
+      } else {
+        // Attempt immediate login if auto-confirm is enabled on the project
+        const loginRes = await supabase.auth.signInWithPassword({ email, password });
+        if (loginRes.data?.session) {
+          setSession(loginRes.data.session);
+          setUser(loginRes.data.user);
+        } else if (data.user?.identities && data.user.identities.length === 0) {
+          return { error: 'An account with this email already exists. Please sign in.' };
+        } else {
+          return { error: 'Account registered. Please check your email to confirm your account before logging in.' };
+        }
+      }
+
       if (data.user) {
         // Optimistically create/ensure profile in case trigger takes a moment
         const userProfile: UserProfile = {

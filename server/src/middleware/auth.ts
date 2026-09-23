@@ -1,6 +1,7 @@
 import { UserProfile, UserRole } from '@holdon/shared';
 import { NextFunction, Request, Response } from 'express';
 import { supabaseAdmin } from '../lib/supabase.js';
+import { logger } from '../logger.js';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -21,11 +22,15 @@ export const authenticateToken = async (
   }
 
   const token = authHeader.split(' ')[1];
-  if (!token) return next();
+  if (!token || token === 'undefined' || token === 'null') {
+    logger.warn('authenticateToken: Received empty or literal null/undefined token');
+    return next();
+  }
 
   try {
     const { data, error } = await supabaseAdmin.auth.getUser(token);
     if (error || !data.user) {
+      logger.warn({ error: error?.message }, 'authenticateToken: Supabase auth.getUser failed');
       return next();
     }
 
@@ -52,7 +57,8 @@ export const authenticateToken = async (
     }
 
     next();
-  } catch (err) {
+  } catch (err: any) {
+    logger.error({ err: err?.message }, 'authenticateToken: Exception during token verification');
     next();
   }
 };

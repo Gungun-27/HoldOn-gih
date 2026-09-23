@@ -12,6 +12,7 @@ import {
   User,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { AuthModal } from '../../components/auth/AuthModal.js';
 import { Button } from '../../components/ui/Button.js';
 import { useAuth } from '../../contexts/AuthContext.js';
 import { supabase } from '../../lib/supabase.js';
@@ -47,8 +48,9 @@ export const ComplaintForm: React.FC<ComplaintFormProps> = ({
   analysisSummary,
   onSubmitted,
 }) => {
-  const { user, profile } = useAuth();
+  const { user, profile, session } = useAuth();
   const [step, setStep] = useState<number>(1);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
   // Form states
   const [category, setCategory] = useState<string>(CATEGORIES[0]);
@@ -65,6 +67,12 @@ export const ComplaintForm: React.FC<ComplaintFormProps> = ({
   const [name, setName] = useState<string>(profile?.name || '');
   const [email, setEmail] = useState<string>(user?.email || '');
   const [hasConsent, setHasConsent] = useState<boolean>(false);
+
+  // Sync profile details once loaded
+  useEffect(() => {
+    if (profile?.name && !name) setName(profile.name);
+    if (user?.email && !email) setEmail(user.email);
+  }, [profile, user]);
 
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -153,12 +161,34 @@ export const ComplaintForm: React.FC<ComplaintFormProps> = ({
       return;
     }
 
+    // Require authentication
+    if (!user) {
+      setError('You must be signed in to submit an official complaint. Please sign in or register.');
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     setError(null);
     setIsSubmitting(true);
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const session = (await supabase.auth.getSession()).data.session;
+
+      // Retrieve valid access token (attempt refresh if needed)
+      let token = session?.access_token;
+      if (!token) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        token = sessionData.session?.access_token;
+      }
+      if (!token) {
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        token = refreshData.session?.access_token;
+      }
+
+      if (!token) {
+        setIsAuthModalOpen(true);
+        throw new Error('Your login session has expired. Please sign in again to submit your complaint.');
+      }
 
       const payload = {
         category,
@@ -169,17 +199,16 @@ export const ComplaintForm: React.FC<ComplaintFormProps> = ({
         description: description.trim(),
         masked_excerpt: maskedExcerpt.trim() || undefined,
         analysis_summary: analysisSummary || undefined,
-        complainant_name: name.trim() || 'Citizen',
+        complainant_name: name.trim() || profile?.name || 'Citizen',
         complainant_email: email.trim(),
         consent: true,
-        user_id: user?.id || undefined,
       };
 
       const response = await fetch(`${apiUrl}/api/complaints`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -187,7 +216,11 @@ export const ComplaintForm: React.FC<ComplaintFormProps> = ({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || data.message || 'Failed to submit complaint');
+        if (response.status === 401) {
+          setIsAuthModalOpen(true);
+          throw new Error('Authentication expired or unauthorized. Please sign in again.');
+        }
+        throw new Error(data.message || data.error || 'Failed to submit complaint');
       }
 
       const ref = data.complaint?.ref;
@@ -536,6 +569,23 @@ export const ComplaintForm: React.FC<ComplaintFormProps> = ({
                   </span>
                 </label>
               </div>
+
+              {/* Sign In Required Notice if guest */}
+              {!user && (
+                <div className="p-3.5 bg-accent/10 border border-accent/25 rounded-[10px] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="text-text/90">
+                    <strong className="text-accent">Sign in required:</strong> You must be signed in to submit an official complaint and receive updates.
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    onClick={() => setIsAuthModalOpen(true)}
+                  >
+                    Sign In / Register
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -562,6 +612,15 @@ export const ComplaintForm: React.FC<ComplaintFormProps> = ({
                 >
                   Next Step
                 </Button>
+              ) : !user ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => setIsAuthModalOpen(true)}
+                  icon={<Send className="w-4 h-4" />}
+                >
+                  Sign In to Submit
+                </Button>
               ) : (
                 <Button
                   type="submit"
@@ -576,6 +635,12 @@ export const ComplaintForm: React.FC<ComplaintFormProps> = ({
           </div>
         </form>
       </div>
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={() => setIsAuthModalOpen(false)}
+      />
     </div>
   );
 };
