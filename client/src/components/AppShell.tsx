@@ -191,6 +191,17 @@ export const AppShell: React.FC<AppShellProps> = ({
                         <span>Run Setup Guide</span>
                       </button>
 
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          onNavChange?.('settings');
+                        }}
+                        className="w-full text-left px-2 py-1.5 rounded-md hover:bg-surface-2 flex items-center gap-2 text-text transition-colors"
+                      >
+                        <Settings className="w-3.5 h-3.5 text-accent" />
+                        <span>Privacy & Data Rights</span>
+                      </button>
+
                       {isOfficer && (
                         <button
                           onClick={() => {

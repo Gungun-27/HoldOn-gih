@@ -192,3 +192,99 @@ export async function sendStatusChangeEmail(params: {
     logger.error({ err, ref: params.ref }, 'Failed to send status change email');
   }
 }
+
+/**
+ * Send an HTML confirmation email when user requests permanent data deletion / anonymisation (FR-40).
+ * Fire-and-forget: logs errors but never throws.
+ */
+export async function sendDataDeletionConfirmationEmail(params: {
+  toEmail: string;
+  name?: string;
+  anonymisedCount: number;
+  anonymisedAt: string;
+}): Promise<void> {
+  const transport = getTransporter();
+  if (!transport) {
+    logger.info({ to: params.toEmail }, 'Deletion confirmation email skipped (SMTP not configured)');
+    return;
+  }
+
+  try {
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#060A0C;font-family:'Manrope',system-ui,-apple-system,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#060A0C;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#0C1215;border:1px solid #1F2A2F;border-radius:16px;overflow:hidden;">
+        <!-- Header -->
+        <tr>
+          <td style="padding:24px 28px 16px;border-bottom:1px solid #1F2A2F;">
+            <table cellpadding="0" cellspacing="0"><tr>
+              <td style="width:32px;height:32px;background-color:#10B981;border-radius:10px;text-align:center;vertical-align:middle;">
+                <span style="color:#04130D;font-weight:600;font-size:14px;">H</span>
+              </td>
+              <td style="padding-left:12px;">
+                <span style="color:#F3F6F7;font-weight:600;font-size:16px;letter-spacing:-0.02em;">HoldOn</span>
+                <span style="color:#9AA6AB;font-size:11px;margin-left:8px;">Privacy Notice</span>
+              </td>
+            </tr></table>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:28px;">
+            <p style="color:#34D399;font-size:18px;font-weight:700;margin:0 0 16px;">
+              Data Deletion & Anonymisation Complete
+            </p>
+
+            <p style="color:#F3F6F7;font-size:14px;margin:0 0 16px;line-height:1.6;">
+              Hello ${params.name || 'Citizen'},
+            </p>
+
+            <p style="color:#9AA6AB;font-size:13px;line-height:1.6;margin:0 0 20px;">
+              As requested under your privacy and data protection rights (DPDP Act / GDPR), your personal narratives, masked transcripts, names, and contact details have been permanently erased and anonymised across <strong>${params.anonymisedCount}</strong> complaint record(s).
+            </p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#111A1E;border:1px solid #1F2A2F;border-radius:10px;margin-bottom:20px;">
+              <tr>
+                <td style="padding:16px 20px;">
+                  <p style="color:#9AA6AB;font-size:11px;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.05em;">Execution Timestamp</p>
+                  <p style="color:#F3F6F7;font-size:13px;font-family:'IBM Plex Mono',monospace;margin:0;">${params.anonymisedAt}</p>
+                </td>
+              </tr>
+            </table>
+
+            <p style="color:#9AA6AB;font-size:12px;line-height:1.6;margin:0;">
+              In accordance with regulatory audit trail requirements, non-identifying reference numbers, status transition logs, and cryptographic SHA-256 verification hashes remain preserved to prevent fraud tampering.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:16px 28px 24px;border-top:1px solid #1F2A2F;">
+            <p style="color:#9AA6AB;font-size:11px;margin:0;">
+              This is an automated confirmation of your data deletion request.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    await transport.sendMail({
+      from: FROM,
+      to: params.toEmail,
+      subject: '[HoldOn] Confirmation: Personal data deletion and anonymisation completed',
+      html,
+    });
+
+    logger.info({ to: params.toEmail }, 'Data deletion confirmation email sent');
+  } catch (err) {
+    logger.error({ err, to: params.toEmail }, 'Failed to send data deletion confirmation email');
+  }
+}

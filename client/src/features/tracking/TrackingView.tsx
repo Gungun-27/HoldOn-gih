@@ -115,7 +115,7 @@ export const TrackingView: React.FC<TrackingViewProps> = ({ initialRef }) => {
           filter: `complaint_id=eq.${complaint.id}`,
         },
         () => {
-          fetchComplaintDetails(complaint.ref, complaint.complainant_email);
+          fetchComplaintDetails(complaint.ref, complaint.complainant_email || undefined);
         }
       )
       .subscribe();
@@ -209,8 +209,8 @@ export const TrackingView: React.FC<TrackingViewProps> = ({ initialRef }) => {
                   key={item.id}
                   onClick={() => {
                     setRefQuery(item.ref);
-                    setEmailQuery(item.complainant_email);
-                    fetchComplaintDetails(item.ref, item.complainant_email);
+                    setEmailQuery(item.complainant_email || '');
+                    fetchComplaintDetails(item.ref, item.complainant_email || undefined);
                   }}
                   className="p-3 bg-surface-2 border border-border hover:border-border-strong rounded-lg text-left flex items-center justify-between transition-colors"
                 >
@@ -257,11 +257,16 @@ export const TrackingView: React.FC<TrackingViewProps> = ({ initialRef }) => {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => fetchComplaintDetails(complaint.ref, complaint.complainant_email)}
+                  onClick={() => fetchComplaintDetails(complaint.ref, complaint.complainant_email || undefined)}
                   icon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
                 >
                   Refresh
                 </Button>
+                {complaint.anonymised_at && (
+                  <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-medium text-xs rounded-full">
+                    Anonymised
+                  </span>
+                )}
                 <span className="px-3 py-1 bg-accent/15 border border-accent text-accent font-medium text-xs rounded-full">
                   {complaint.status}
                 </span>

@@ -7,6 +7,7 @@ import { logger } from './logger.js';
 import { analyzeRouter } from './routes/analyze.js';
 import { authRouter } from './routes/authRoutes.js';
 import { complaintRouter } from './routes/complaintRoutes.js';
+import { userRouter } from './routes/userRoutes.js';
 import { verifyRouter } from './routes/verifyRoutes.js';
 
 export function createApp() {
@@ -72,6 +73,7 @@ export function createApp() {
   app.use('/api/analyze', analyzeRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/complaints', complaintRouter);
+  app.use('/api/user', userRouter);
   app.use('/api/verify', verifyRouter);
 
   // Lightweight guardian alert endpoint for guest users (FR-14)

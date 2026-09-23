@@ -129,13 +129,13 @@ export interface Complaint {
   ref: string;
   user_id?: string | null;
   complainant_name?: string | null;
-  complainant_email: string;
+  complainant_email?: string | null;
   category: string;
   incident_at?: string | null;
   state: string;
   district?: string | null;
   amount_lost: number;
-  description: string;
+  description?: string | null;
   masked_excerpt?: string | null;
   analysis_summary?: AnalyzeResponse | null;
   status: ComplaintStatus;
@@ -145,5 +145,31 @@ export interface Complaint {
   is_seed: boolean;
   created_at: string;
   updated_at: string;
+  anonymised_at?: string | null;
   events?: ComplaintEvent[];
 }
+
+export interface VerifyResult {
+  valid: boolean;
+  ref?: string;
+  status?: string;
+  category?: string;
+  jurisdiction?: string;
+  created_at?: string;
+  is_seed?: boolean;
+  anonymised_at?: string | null;
+  error?: string;
+}
+
+export interface UserDataExport {
+  export_version: string;
+  exported_at: string;
+  user: {
+    id: string;
+    email?: string;
+    profile?: UserProfile;
+  };
+  complaint_count: number;
+  complaints: Complaint[];
+}
+

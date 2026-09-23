@@ -8,6 +8,7 @@ import { ComplaintForm } from './features/complaints/ComplaintForm.js';
 import { LandingPage } from './features/landing/LandingPage.js';
 import { OfficerConsole } from './features/officer/OfficerConsole.js';
 import { RecoveryGuidePage } from './features/recovery/RecoveryGuidePage.js';
+import { PrivacySettings } from './features/settings/PrivacySettings.js';
 import { TrackingView } from './features/tracking/TrackingView.js';
 import { VerifyPage } from './features/verify/VerifyPage.js';
 
@@ -33,6 +34,9 @@ const MainApp: React.FC = () => {
     } else if (pathname === '/paid' || pathname.startsWith('/paid')) {
       setActiveNav('paid');
       setView('app');
+    } else if (pathname === '/settings' || pathname.startsWith('/settings')) {
+      setActiveNav('settings');
+      setView('app');
     }
 
     const handleNavVerify = (e: any) => {
@@ -49,10 +53,19 @@ const MainApp: React.FC = () => {
       window.history.pushState(null, '', '/paid');
     };
 
+    const handleNavSettings = () => {
+      setActiveNav('settings');
+      setView('app');
+      window.history.pushState(null, '', '/settings');
+    };
+
     const handlePopState = () => {
       const currentPath = window.location.pathname;
       if (currentPath === '/paid' || currentPath.startsWith('/paid')) {
         setActiveNav('paid');
+        setView('app');
+      } else if (currentPath === '/settings' || currentPath.startsWith('/settings')) {
+        setActiveNav('settings');
         setView('app');
       } else if (currentPath.startsWith('/verify')) {
         const m = currentPath.match(/^\/verify(?:\/([a-zA-Z0-9_-]+))?/);
@@ -66,10 +79,12 @@ const MainApp: React.FC = () => {
 
     window.addEventListener('holdon:navigate-verify', handleNavVerify);
     window.addEventListener('holdon:navigate-paid', handleNavPaid);
+    window.addEventListener('holdon:navigate-settings', handleNavSettings);
     window.addEventListener('popstate', handlePopState);
     return () => {
       window.removeEventListener('holdon:navigate-verify', handleNavVerify);
       window.removeEventListener('holdon:navigate-paid', handleNavPaid);
+      window.removeEventListener('holdon:navigate-settings', handleNavSettings);
       window.removeEventListener('popstate', handlePopState);
     };
   }, [view]);
@@ -108,7 +123,9 @@ const MainApp: React.FC = () => {
           window.history.pushState(null, '', '/paid');
         } else if (tab === 'verify') {
           window.history.pushState(null, '', verifyHash ? `/verify/${verifyHash}` : '/verify');
-        } else if (window.location.pathname.startsWith('/verify') || window.location.pathname === '/paid') {
+        } else if (tab === 'settings') {
+          window.history.pushState(null, '', '/settings');
+        } else if (window.location.pathname.startsWith('/verify') || window.location.pathname === '/paid' || window.location.pathname === '/settings') {
           window.history.pushState(null, '', '/');
         }
       }}
@@ -184,27 +201,10 @@ const MainApp: React.FC = () => {
           )}
 
           {activeNav === 'settings' && (
-            <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-8">
-              <div className="bg-surface border border-border rounded-xl p-6 max-w-xl mx-auto space-y-4">
-                <h2 className="text-xl font-semibold text-text">System Preferences</h2>
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center justify-between p-3 bg-surface-2 rounded-lg border border-border">
-                    <div>
-                      <div className="font-medium text-text">Selected Jurisdiction</div>
-                      <div className="text-xs text-muted">Configures regional authority packs</div>
-                    </div>
-                    <span className="font-semibold text-accent">{region}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-surface-2 rounded-lg border border-border">
-                    <div>
-                      <div className="font-medium text-text">Digit Masking</div>
-                      <div className="text-xs text-muted">Mandatory client & server sanitization</div>
-                    </div>
-                    <span className="text-xs font-semibold text-accent bg-ok-bg px-2 py-0.5 rounded-full">Active</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <PrivacySettings
+              region={region}
+              onRegionChange={setRegion}
+            />
           )}
         </div>
         <Footer region={region} />

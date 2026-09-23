@@ -21,6 +21,15 @@ export const Footer: React.FC<FooterProps> = ({ region }) => {
             <p className="text-muted leading-relaxed text-sm">
               HoldOn never stores or logs your analyzed text. Phone numbers, card digits, Aadhaar, and OTPs are stripped before analysis.
             </p>
+            <div className="mt-2 pt-2 border-t border-border/50">
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('holdon:navigate-settings'))}
+                className="text-xs text-accent hover:underline inline-flex items-center gap-1 font-medium focus:outline-none"
+              >
+                Data rights & export (/settings) &rarr;
+              </button>
+            </div>
           </div>
 
           <div>

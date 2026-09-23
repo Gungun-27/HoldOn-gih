@@ -18,6 +18,7 @@ interface VerifyResult {
   jurisdiction?: string;
   created_at?: string;
   is_seed?: boolean;
+  anonymised_at?: string | null;
 }
 
 interface VerifyPageProps {
@@ -139,6 +140,20 @@ export const VerifyPage: React.FC<VerifyPageProps> = ({ initialHash }) => {
               <p className="text-xs text-muted">This hash matches an untampered record in the HoldOn database.</p>
             </div>
           </div>
+
+          {result.anonymised_at && (
+            <div className="mb-4 p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center gap-2.5 text-xs text-amber-300 font-medium">
+              <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 animate-pulse" />
+              <span>
+                Record anonymised on{' '}
+                {new Date(result.anonymised_at).toLocaleDateString('en-IN', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </span>
+            </div>
+          )}
 
           <div className="space-y-3 text-xs">
             <div className="flex justify-between p-3 bg-surface-2 rounded-lg border border-border">

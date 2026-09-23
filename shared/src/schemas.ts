@@ -93,3 +93,12 @@ export const CreateComplaintSchema = z.object({
 
 export type CreateComplaintInput = z.infer<typeof CreateComplaintSchema>;
 
+export const DeleteUserDataSchema = z.object({
+  confirmation: z.literal('DELETE', {
+    errorMap: () => ({ message: 'Please type DELETE to confirm permanent data anonymisation' }),
+  }),
+});
+
+export type DeleteUserDataInput = z.infer<typeof DeleteUserDataSchema>;
+
+

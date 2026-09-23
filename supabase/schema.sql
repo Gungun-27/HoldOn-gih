@@ -150,6 +150,19 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- Citizens can update their own complaints (e.g. for DPDP right to erasure / anonymisation)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'complaints_update_own' AND tablename = 'complaints') THEN
+    CREATE POLICY complaints_update_own ON complaints FOR UPDATE
+      USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+-- Support anonymisation and right-to-erasure (FR-40)
+ALTER TABLE complaints ALTER COLUMN description DROP NOT NULL;
+ALTER TABLE complaints ALTER COLUMN complainant_email DROP NOT NULL;
+ALTER TABLE complaints ADD COLUMN IF NOT EXISTS anonymised_at TIMESTAMPTZ;
+
 -- Index for fast hash lookups (FR-18 verify endpoint)
 CREATE INDEX IF NOT EXISTS idx_complaints_report_hash ON complaints (report_hash);
 

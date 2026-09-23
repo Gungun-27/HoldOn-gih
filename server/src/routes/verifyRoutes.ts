@@ -15,7 +15,7 @@ verifyRouter.get('/:hash', async (req, res) => {
   try {
     const { data: complaint, error } = await supabaseAdmin
       .from('complaints')
-      .select('ref, status, category, state, district, created_at, is_seed, report_hash')
+      .select('ref, status, category, state, district, created_at, is_seed, report_hash, anonymised_at')
       .eq('report_hash', hash)
       .maybeSingle();
 
@@ -33,6 +33,7 @@ verifyRouter.get('/:hash', async (req, res) => {
         : complaint.state,
       created_at: complaint.created_at,
       is_seed: complaint.is_seed,
+      anonymised_at: complaint.anonymised_at || null,
     });
   } catch {
     return res.status(500).json({ valid: false, error: 'Internal server error' });

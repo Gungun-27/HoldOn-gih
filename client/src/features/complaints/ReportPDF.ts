@@ -102,7 +102,7 @@ export async function generateReportPDF(complaint: Complaint): Promise<void> {
   y += 6;
 
   // Description
-  drawField('INCIDENT DESCRIPTION', complaint.description);
+  drawField('INCIDENT DESCRIPTION', complaint.description || (complaint.anonymised_at ? '[Record anonymised by citizen]' : 'No description provided'));
 
   // Masked excerpt
   if (complaint.masked_excerpt) {

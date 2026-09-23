@@ -32,3 +32,20 @@ The recovery guide at `/paid` provides a deterministic, five-step emergency prot
 3. **How does citing official regulatory sources (e.g., RBI Master Directions, BSA Section 63) assist victims?**
    - *Answer:* Bank desk representatives and first responders sometimes fail to act swiftly on verbal fraud reports. Equipping victims with the exact regulatory citation (such as the RBI 3-day zero-liability mandate under circular DPSS.CO.PD.No.3631 or BSA Section 63 digital evidence integrity) provides the victim with actionable legal authority to demand immediate inter-bank stop-payment holds during the critical "Golden Hour".
 
+## FR-40: Export and Delete My Data (DPDP Act Compliance)
+
+### Plain-Language Explanation
+HoldOn provides full statutory data sovereignty compliant with the Digital Personal Data Protection (DPDP) Act, 2023. Authenticated citizens can invoke `GET /api/user/export` at any time to download their complete complaint history, including status timeline events, masked forensic excerpts, and SHA-256 cryptographic hashes in a portable JSON file format. Citizens exercising their right to erasure can invoke `POST /api/user/delete-data`, which strictly requires typing the uppercase confirmation `DELETE` to protect against accidental clicks. Upon confirmation, the backend permanently wipes all personal descriptions, complainant names, emails, and masked narratives, while preserving anonymised metadata, case reference IDs, and cryptographic hashes so law enforcement audits and public verifications remain untampered. When an anonymised record is queried on the public verification portal (`/verify/:hash`), it cleanly displays `"Record anonymised on [date]"` alongside an amber status banner, and a formal confirmation notice is automatically emailed to the user.
+
+### Likely Judge Questions & Answers
+
+1. **Why do you anonymise personal fields rather than physically dropping the database rows upon deletion?**
+   - *Answer:* Dropping database rows would destroy the immutable cryptographic audit trail and break existing law enforcement case references. By zeroing out PII (`description`, `masked_excerpt`, `complainant_name`, `complainant_email`) and recording `anonymised_at = now()`, we satisfy DPDP right to erasure while preventing bad actors from claiming that verified crime reports were fabricated or erased from public verification records.
+
+2. **How is the delete confirmation protected from accidental activation or CSRF attacks?**
+   - *Answer:* The endpoint enforces strict session token authentication via Supabase JWT headers, rejects GET or unconfirmed requests, and validates the request body using a strict Zod schema (`DeleteUserDataSchema`) requiring the exact literal string `DELETE`. The frontend UI requires the citizen to deliberately type `DELETE` into a confirmation modal before the action button is unlocked.
+
+3. **What does the public or officer see when verifying an anonymised case report at /verify/:hash?**
+   - *Answer:* The public verification endpoint checks the cryptographic SHA-256 report hash and displays that the integrity hash is authentic and recognized by the system. However, it displays a distinct amber status indicator reading `"Record anonymised on [date]"`, letting verifiers know that the citizen exercised their data privacy rights without invalidating the case's historical timestamp, jurisdiction, and status transitions.
+
+
