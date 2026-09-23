@@ -1,4 +1,4 @@
-import { REGION_PACKS, Region } from '@holdon/shared';
+import { REGION_PACKS, Region, ScamType, SCAM_TYPE_LABELS } from '@holdon/shared';
 import { AlertOctagon, ExternalLink, PhoneCall, ShieldAlert, X } from 'lucide-react';
 import React from 'react';
 import { Button } from '../../components/ui/Button.js';
@@ -7,6 +7,7 @@ interface StopOverlayProps {
   isOpen: boolean;
   onDismiss: () => void;
   region: Region;
+  scamType?: ScamType;
   onOpenGuardianAlert: () => void;
   onOpenFileComplaint?: () => void;
 }
@@ -15,6 +16,7 @@ export const StopOverlay: React.FC<StopOverlayProps> = ({
   isOpen,
   onDismiss,
   region,
+  scamType,
   onOpenGuardianAlert,
   onOpenFileComplaint,
 }) => {
@@ -37,9 +39,16 @@ export const StopOverlay: React.FC<StopOverlayProps> = ({
               <h2 className="text-lg font-semibold tracking-heading">
                 Hold on. High pressure detected.
               </h2>
-              <p className="text-xs text-red-200 font-medium">
-                Coercive tactics identified in this conversation
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-xs text-red-200 font-medium">
+                  Coercive tactics identified in this conversation
+                </p>
+                {scamType && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-black/30 text-[11px] font-semibold text-white">
+                    {SCAM_TYPE_LABELS[scamType] ?? scamType}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <button

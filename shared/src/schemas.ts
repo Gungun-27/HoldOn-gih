@@ -1,9 +1,19 @@
 import { z } from 'zod';
-import { TACTIC_TYPES } from './types.js';
+import { SCAM_TYPES, TACTIC_TYPES } from './types.js';
 
 export const RegionSchema = z.enum(['IN', 'US', 'UK']);
 export const RiskStateSchema = z.enum(['SAFE', 'WARN', 'ALERT']);
 export const TacticTypeSchema = z.enum(TACTIC_TYPES);
+export const ScamTypeSchema = z.enum(SCAM_TYPES);
+
+export const SafeScamTypeSchema = z
+  .preprocess((val) => {
+    if (typeof val === 'string' && (SCAM_TYPES as readonly string[]).includes(val)) {
+      return val;
+    }
+    return 'other';
+  }, ScamTypeSchema)
+  .default('other');
 
 export const AnalyzeRequestSchema = z.object({
   text: z.string().min(1, 'Text is required').max(4000, 'Text exceeds maximum 4,000 characters'),
@@ -36,6 +46,7 @@ export const GroqExtractionSchema = z.object({
   tactics: z.array(GroqTacticItemSchema).default([]),
   legit_signals: z.array(GroqLegitSignalSchema).default([]),
   advice: z.string().default('Verify via the official number before taking any action.'),
+  scam_type: SafeScamTypeSchema,
 });
 
 export const TacticEvidenceSchema = z.object({
@@ -54,6 +65,7 @@ export const AnalyzeResponseSchema = z.object({
   legit_signals: z.array(GroqLegitSignalSchema),
   advice: z.string(),
   masked_input: z.string().optional(),
+  scam_type: SafeScamTypeSchema,
 });
 
 export const ComplaintStatusSchema = z.enum([

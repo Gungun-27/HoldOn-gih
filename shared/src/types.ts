@@ -35,6 +35,38 @@ export interface AnalyzeRequest {
   previousState?: RiskState;
 }
 
+export const SCAM_TYPES = [
+  'digital_arrest',
+  'parcel_courier',
+  'kyc_update',
+  'investment',
+  'lottery_reward',
+  'job_offer',
+  'other',
+] as const;
+
+export type ScamType = (typeof SCAM_TYPES)[number];
+
+export const SCAM_TYPE_LABELS: Record<ScamType, string> = {
+  digital_arrest: 'Digital Arrest',
+  parcel_courier: 'Parcel / Courier Scam',
+  kyc_update: 'Bank KYC & Account Freeze',
+  investment: 'Investment Fraud',
+  lottery_reward: 'Lottery / Reward Scam',
+  job_offer: 'Job / Task Offer',
+  other: 'Other / Unclassified',
+};
+
+export const SCAM_TYPE_TO_CATEGORY: Record<ScamType, string> = {
+  digital_arrest: 'Digital Arrest / Police Impersonation',
+  parcel_courier: 'Customs / Drug Parcel Extortion',
+  kyc_update: 'Bank KYC & Account Freeze Threat',
+  investment: 'Task / Part-time Investment Fraud',
+  lottery_reward: 'Lottery / Fake Reward Scam',
+  job_offer: 'Part-time Job / Task Offer',
+  other: 'Other Coercion Scam',
+};
+
 export interface AnalyzeResponse {
   score: number;
   state: RiskState;
@@ -44,6 +76,7 @@ export interface AnalyzeResponse {
   legit_signals: LegitSignal[];
   advice: string;
   masked_input?: string; // FR-37: exact sanitized text sent to the LLM
+  scam_type?: ScamType; // FR-39: classified scam type
 }
 
 export interface RegionHelpInfo {

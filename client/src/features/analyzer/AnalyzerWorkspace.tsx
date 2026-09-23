@@ -6,7 +6,7 @@ import {
   TacticEvidence,
   TacticType,
 } from '@holdon/shared';
-import { Bell, RefreshCw } from 'lucide-react';
+import { Bell, FileText, RefreshCw } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
 import { Button } from '../../components/ui/Button.js';
 import { CaptureTabs } from './CaptureTabs.js';
@@ -192,7 +192,12 @@ export const AnalyzerWorkspace: React.FC<AnalyzerWorkspaceProps> = ({
           <span className="text-sm font-medium text-muted">
             3. Risk assessment
           </span>
-          <PressureGauge score={currentScore} state={currentState} degraded={isDegraded} />
+          <PressureGauge
+            score={currentScore}
+            state={currentState}
+            degraded={isDegraded}
+            scamType={latestResponse?.scam_type}
+          />
 
           {/* Alert My Contact: accent in SAFE/WARN, red in ALERT */}
           <Button
@@ -204,6 +209,19 @@ export const AnalyzerWorkspace: React.FC<AnalyzerWorkspaceProps> = ({
           >
             Alert my contact
           </Button>
+
+          {/* File complaint with this analysis */}
+          {latestResponse && onNavigateComplaint && (
+            <Button
+              variant="secondary"
+              size="md"
+              className="w-full"
+              onClick={() => onNavigateComplaint(accumulatedTranscript, latestResponse)}
+              icon={<FileText className="w-4 h-4" />}
+            >
+              File complaint
+            </Button>
+          )}
 
           <TacticList
             tactics={currentTactics}
@@ -219,6 +237,7 @@ export const AnalyzerWorkspace: React.FC<AnalyzerWorkspaceProps> = ({
         isOpen={isStopOverlayOpen}
         onDismiss={handleDismissStopOverlay}
         region={region}
+        scamType={latestResponse?.scam_type}
         onOpenGuardianAlert={() => setIsGuardianModalOpen(true)}
         onOpenFileComplaint={() => {
           if (onNavigateComplaint) {

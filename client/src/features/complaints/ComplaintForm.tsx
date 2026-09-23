@@ -1,4 +1,4 @@
-import { AnalyzeResponse, maskPII } from '@holdon/shared';
+import { AnalyzeResponse, maskPII, SCAM_TYPE_LABELS, SCAM_TYPE_TO_CATEGORY } from '@holdon/shared';
 import {
   AlertCircle,
   Calendar,
@@ -25,9 +25,11 @@ interface ComplaintFormProps {
 
 const CATEGORIES = [
   'Digital Arrest / Police Impersonation',
+  'Customs / Drug Parcel Extortion',
   'Bank KYC & Account Freeze Threat',
   'Task / Part-time Investment Fraud',
-  'Customs / Drug Parcel Extortion',
+  'Part-time Job / Task Offer',
+  'Lottery / Fake Reward Scam',
   'Remote Access / AnyDesk Takeover',
   'Electricity / Utility Disconnection Threat',
   'Other Coercion Scam',
@@ -52,8 +54,12 @@ export const ComplaintForm: React.FC<ComplaintFormProps> = ({
   const [step, setStep] = useState<number>(1);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
-  // Form states
-  const [category, setCategory] = useState<string>(CATEGORIES[0]);
+  // Form states: pre-select matching category from analysis scam_type (FR-39)
+  const initialCategory =
+    analysisSummary?.scam_type && SCAM_TYPE_TO_CATEGORY[analysisSummary.scam_type]
+      ? SCAM_TYPE_TO_CATEGORY[analysisSummary.scam_type]
+      : CATEGORIES[0];
+  const [category, setCategory] = useState<string>(initialCategory);
   const [incidentDate, setIncidentDate] = useState<string>(
     new Date().toISOString().slice(0, 16)
   );
@@ -67,6 +73,16 @@ export const ComplaintForm: React.FC<ComplaintFormProps> = ({
   const [name, setName] = useState<string>(profile?.name || '');
   const [email, setEmail] = useState<string>(user?.email || '');
   const [hasConsent, setHasConsent] = useState<boolean>(false);
+
+  // Pre-select category whenever analysisSummary changes (FR-39)
+  useEffect(() => {
+    if (analysisSummary?.scam_type) {
+      const targetCategory = SCAM_TYPE_TO_CATEGORY[analysisSummary.scam_type];
+      if (targetCategory) {
+        setCategory(targetCategory);
+      }
+    }
+  }, [analysisSummary]);
 
   // Sync profile details once loaded
   useEffect(() => {
@@ -87,7 +103,10 @@ export const ComplaintForm: React.FC<ComplaintFormProps> = ({
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const data = JSON.parse(saved);
-        if (data.category) setCategory(data.category);
+        // Only restore draft category if user didn't arrive with an active analysis scam_type
+        if (!analysisSummary?.scam_type && data.category) {
+          setCategory(data.category);
+        }
         if (data.state) setState(data.state);
         if (data.district) setDistrict(data.district);
         if (data.amountLost) setAmountLost(data.amountLost);
@@ -356,9 +375,17 @@ export const ComplaintForm: React.FC<ComplaintFormProps> = ({
           {step === 1 && (
             <div className="space-y-5">
               <div>
-                <label className="block text-xs font-medium text-muted mb-2">
-                  Scam Classification
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-medium text-muted">
+                    Scam Classification
+                  </label>
+                  {analysisSummary?.scam_type && (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] text-accent font-medium px-2 py-0.5 bg-accent/10 border border-accent/20 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                      Pre-selected from AI Analysis ({SCAM_TYPE_LABELS[analysisSummary.scam_type] || analysisSummary.scam_type})
+                    </span>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {CATEGORIES.map((cat) => (
                     <button
@@ -371,7 +398,10 @@ export const ComplaintForm: React.FC<ComplaintFormProps> = ({
                           : 'border-border bg-surface-2 text-muted hover:border-border-strong'
                       }`}
                     >
-                      {cat}
+                      <div className="flex items-center justify-between">
+                        <span>{cat}</span>
+                        {category === cat && <Check className="w-3.5 h-3.5 text-accent" />}
+                      </div>
                     </button>
                   ))}
                 </div>

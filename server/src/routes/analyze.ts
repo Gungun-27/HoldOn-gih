@@ -3,6 +3,7 @@ import {
   AnalyzeResponse,
   computeRisk,
   maskPII,
+  ScamType,
   TACTIC_WEIGHTS,
   TacticEvidence,
   verifyEvidence,
@@ -36,6 +37,7 @@ analyzeRouter.post('/', async (req: Request, res: Response) => {
   }[] = [];
   let rawLegitSignals: { type: string; evidence: string; confidence: number }[] = [];
   let advice = 'Verify via the official number before taking any action.';
+  let scamType: ScamType = 'other';
   let degraded = false;
 
   const groqApiKey = process.env.GROQ_API_KEY;
@@ -49,6 +51,7 @@ analyzeRouter.post('/', async (req: Request, res: Response) => {
       if (extraction.advice) {
         advice = extraction.advice;
       }
+      scamType = extraction.scam_type || 'other';
     } catch {
       logger.info('Using rule-based fallback scorer due to Groq timeout/error.');
       degraded = true;
@@ -56,6 +59,7 @@ analyzeRouter.post('/', async (req: Request, res: Response) => {
       rawTactics = fallback.tactics;
       rawLegitSignals = fallback.legitSignals;
       advice = fallback.advice;
+      scamType = fallback.scamType;
     }
   } else {
     // No Groq API key set: transparently use rule-based fallback
@@ -64,6 +68,7 @@ analyzeRouter.post('/', async (req: Request, res: Response) => {
     rawTactics = fallback.tactics;
     rawLegitSignals = fallback.legitSignals;
     advice = fallback.advice;
+    scamType = fallback.scamType;
   }
 
   // 3. Evidence Check: every tactic quote must exist verbatim in the masked input
@@ -98,6 +103,7 @@ analyzeRouter.post('/', async (req: Request, res: Response) => {
     legit_signals: verified.validLegitSignals,
     advice,
     masked_input: maskedText, // FR-37: additive exact sanitized text sent to the LLM
+    scam_type: scamType, // FR-39: scam-type label
   };
 
   return res.json(responsePayload);

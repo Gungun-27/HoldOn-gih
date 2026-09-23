@@ -1,4 +1,4 @@
-import { GroqExtractionSchema } from '@holdon/shared';
+import { GroqExtractionSchema, ScamType } from '@holdon/shared';
 import Groq from 'groq-sdk';
 import { logger } from '../logger.js';
 
@@ -16,6 +16,7 @@ export interface GroqExtractionResult {
     confidence: number;
   }[];
   advice: string;
+  scam_type: ScamType;
 }
 
 const SYSTEM_PROMPT = `You are an expert security forensic analyzer detecting coercion, impersonation, and pressure tactics in scam communications.
@@ -31,6 +32,15 @@ Analyze the text for these 7 specific scam tactics:
 7. "too_good_reward": Fake high returns, work-from-home tasks, lottery prizes, or guaranteed instant payouts.
 
 Also identify legitimate signals if present (e.g., advising victim to visit the official local branch in person, explicit statements that passwords/OTPs will never be asked).
+
+Also classify the overall communication into exactly one "scam_type" from this fixed list:
+- "digital_arrest": Impersonating police, CBI, NIA, court, customs alleging crime, narcotics, or digital arrest.
+- "parcel_courier": Courier (FedEx, DHL, India Post) claiming illegal goods/drugs/contraband in a parcel.
+- "kyc_update": Bank account block, PAN/Aadhaar update, electricity bill disconnection, SIM deactivation.
+- "investment": Stock trading tips, crypto schemes, guaranteed high return investment frauds.
+- "lottery_reward": Lottery prize, lucky contest, scratch card, reward winnings.
+- "job_offer": Part-time work from home, YouTube video liking, ratings, review tasks.
+- "other": Any other scam, unclassified coercion, or legitimate call.
 
 IMPORTANT RULES:
 - The input may be in English, Hindi, Marathi, or Hinglish (mixed Hindi-English). Understand and extract from all of these.
@@ -54,7 +64,8 @@ Respond ONLY with valid JSON matching this schema:
       "confidence": 0.0 to 1.0
     }
   ],
-  "advice": "Clear plain advice instructing verification via official number"
+  "advice": "Clear plain advice instructing verification via official number",
+  "scam_type": "digital_arrest" | "parcel_courier" | "kyc_update" | "investment" | "lottery_reward" | "job_offer" | "other"
 }`;
 
 export async function extractTacticsWithGroq(

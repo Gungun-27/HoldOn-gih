@@ -1,4 +1,4 @@
-import { LegitSignal, TacticEvidence, TacticType } from '@holdon/shared';
+import { LegitSignal, ScamType, TacticEvidence, TacticType } from '@holdon/shared';
 
 interface FallbackRule {
   type: TacticType;
@@ -11,7 +11,7 @@ const FALLBACK_RULES: FallbackRule[] = [
     type: 'authority_claim',
     confidence: 0.92,
     patterns: [
-      /(?:cbi|crime branch|cyber crime|cyber cell|police headquarters|delhi police|mumbai police|customs officer|narcotics control|ed officer|enforcement directorate|supreme court|trai official|telecom authority)/i,
+      /(?:cbi|crime branch|cyber crime|cyber cell|police headquarters|delhi police|mumbai police|customs officer|customs official|customs department|customs|narcotics control|ed officer|enforcement directorate|supreme court|trai official|telecom authority)/i,
       /(?:digital arrest|police officer|inspector|sub-inspector|deputy commissioner|officer verification)/i,
       /(?:cbi cyber|police station|pulis vibhag|adhikari)/i,
     ],
@@ -37,6 +37,7 @@ const FALLBACK_RULES: FallbackRule[] = [
     confidence: 0.95,
     patterns: [
       /(?:arrest warrant|non-bailable warrant|fir registered|face legal action|send to jail|money laundering case|drug trafficking|parcel seized|illegal consignment|passport canceled|penalty will be imposed)/i,
+      /(?:seized by customs|illegal drugs|contraband|customs parcel seized)/i,
       /(?:jail bhejenge|giraftar|kanooni karwai|case darj|police aayegi|kaydeshir karwai)/i,
     ],
   },
@@ -62,6 +63,7 @@ const FALLBACK_RULES: FallbackRule[] = [
     confidence: 0.85,
     patterns: [
       /(?:work from home job|like youtube videos (?:and|to) earn|daily income guaranteed|instant lottery winner|overseas job guaranteed|high return investment)/i,
+      /(?:lottery|lucky draw|won (?:a )?prize|cash reward|jackpot|kbc|congratulations you won)/i,
       /(?:ghar baithe kamai|lottery lagi|paise milenge)/i,
     ],
   },
@@ -78,10 +80,59 @@ const LEGIT_PATTERNS: { type: string; pattern: RegExp }[] = [
   },
 ];
 
+export function detectScamTypeFromText(inputText: string): ScamType {
+  const text = inputText.toLowerCase();
+
+  // Parcel / Courier (FedEx, DHL, courier, parcel)
+  if (/(?:parcel|courier|fedex|dhl|india post)/i.test(text) &&
+      /(?:seized|drugs|contraband|customs|custom|police|narcotics|detained|illegal|deliver)/i.test(text)) {
+    return 'parcel_courier';
+  }
+  if (/(?:parcel seized|customs parcel|courier delivery|fedex parcel|dhl parcel)/i.test(text)) {
+    return 'parcel_courier';
+  }
+
+  // Digital Arrest / Police Impersonation
+  if (/(?:digital arrest|arrest warrant|non-bailable|cbi|crime branch|cyber crime|cyber cell|police headquarters|delhi police|mumbai police|supreme court|ed officer|enforcement directorate|jail bhejenge|giraftar|pulis vibhag)/i.test(text)) {
+    return 'digital_arrest';
+  }
+
+  // Job Offer / Task Scam (check before investment as task scams mention tasks + earning)
+  if (/(?:work from home|part[- ]time job|like youtube|review tasks|daily income|job offer|daily tasks|earn \d+|ghar baithe kamai|recruiting manager)/i.test(text)) {
+    return 'job_offer';
+  }
+
+  // Investment Fraud
+  if (/(?:investment|crypto|trading|stock tips|high return|daily profit|guaranteed return|forex|usdt|bitcoin|arbitrage)/i.test(text)) {
+    return 'investment';
+  }
+
+  // KYC / Account Freeze / Electricity Disconnection
+  if (/(?:kyc|account (?:will be )?(?:blocked|frozen|suspended)|pan card|aadhaar|electricity (?:power|bill|supply)|power disconnection|disconnection penalty|sim (?:block|deactivation)|bijli)/i.test(text)) {
+    return 'kyc_update';
+  }
+
+  // Lottery / Prize Reward
+  if (/(?:lottery|lucky draw|won (?:a )?prize|cash reward|jackpot|kbc|congratulations you won)/i.test(text)) {
+    return 'lottery_reward';
+  }
+
+  // Single keyword secondary fallbacks
+  if (/(?:parcel|courier|fedex|dhl)/i.test(text)) return 'parcel_courier';
+  if (/(?:police|inspector|cbi|arrest|warrant)/i.test(text)) return 'digital_arrest';
+  if (/(?:electricity|meter transaction)/i.test(text)) return 'kyc_update';
+  if (/(?:crypto|bitcoin|trading|invest)/i.test(text)) return 'investment';
+  if (/(?:lottery|jackpot|prize)/i.test(text)) return 'lottery_reward';
+  if (/(?:job|salary|hiring)/i.test(text)) return 'job_offer';
+
+  return 'other';
+}
+
 export function runFallbackScorer(inputText: string): {
   tactics: TacticEvidence[];
   legitSignals: LegitSignal[];
   advice: string;
+  scamType: ScamType;
 } {
   const tactics: TacticEvidence[] = [];
   const seenTypes = new Set<TacticType>();
@@ -123,5 +174,12 @@ export function runFallbackScorer(inputText: string): {
     advice = 'Law enforcement agencies never conduct "digital arrests" or ask for online transfers. Verify via the official number.';
   }
 
-  return { tactics, legitSignals, advice };
+  // Classify scam type
+  let scamType: ScamType = detectScamTypeFromText(inputText);
+  // If legitimate signals detected and no coercive tactics matched, classify as 'other'
+  if (legitSignals.length > 0 && tactics.length === 0) {
+    scamType = 'other';
+  }
+
+  return { tactics, legitSignals, advice, scamType };
 }

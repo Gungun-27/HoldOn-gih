@@ -1,6 +1,6 @@
-import { RiskState } from '@holdon/shared';
+import { RiskState, ScamType, SCAM_TYPE_LABELS } from '@holdon/shared';
 import { motion, useReducedMotion } from 'framer-motion';
-import { AlertCircle, AlertTriangle, CheckCircle, Cpu } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle, Cpu, Tag } from 'lucide-react';
 import React from 'react';
 import { Badge } from '../../components/ui/Badge.js';
 
@@ -8,12 +8,14 @@ interface PressureGaugeProps {
   score: number;
   state: RiskState;
   degraded: boolean;
+  scamType?: ScamType;
 }
 
 export const PressureGauge: React.FC<PressureGaugeProps> = ({
   score,
   state,
   degraded,
+  scamType,
 }) => {
   const shouldReduceMotion = useReducedMotion();
 
@@ -143,6 +145,30 @@ export const PressureGauge: React.FC<PressureGaugeProps> = ({
         <span className="text-warn">40 Warn</span>
         <span className="text-alert">70 Alert</span>
       </div>
+
+      {/* Scam-type label (FR-39) */}
+      {scamType && (
+        <div className="w-full mt-3 pt-2.5 border-t border-border flex items-center justify-between text-xs">
+          <span className="text-muted font-medium flex items-center gap-1">
+            <Tag className="w-3 h-3 text-muted" />
+            Scam type
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-2 border border-border text-text shadow-sm">
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                scamType === 'other'
+                  ? 'bg-muted'
+                  : state === 'ALERT'
+                  ? 'bg-alert'
+                  : state === 'WARN'
+                  ? 'bg-warn'
+                  : 'bg-accent'
+              }`}
+            />
+            {SCAM_TYPE_LABELS[scamType] ?? 'Other'}
+          </span>
+        </div>
+      )}
     </div>
   );
 };
