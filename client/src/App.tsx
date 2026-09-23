@@ -7,6 +7,7 @@ import { AnalyzerWorkspace } from './features/analyzer/AnalyzerWorkspace.js';
 import { ComplaintForm } from './features/complaints/ComplaintForm.js';
 import { LandingPage } from './features/landing/LandingPage.js';
 import { OfficerConsole } from './features/officer/OfficerConsole.js';
+import { RecoveryGuidePage } from './features/recovery/RecoveryGuidePage.js';
 import { TrackingView } from './features/tracking/TrackingView.js';
 import { VerifyPage } from './features/verify/VerifyPage.js';
 
@@ -21,13 +22,16 @@ const MainApp: React.FC = () => {
   const [trackRef, setTrackRef] = useState<string | null>(null);
   const [verifyHash, setVerifyHash] = useState<string | null>(null);
 
-  // Check URL on load for /verify/:hash or /verify
+  // Check URL on load for /verify/:hash, /verify, or /paid (FR-38)
   useEffect(() => {
     const pathname = window.location.pathname;
-    const match = pathname.match(/^\/verify(?:\/([a-zA-Z0-9_-]+))?/);
-    if (match) {
-      if (match[1]) setVerifyHash(match[1]);
+    const matchVerify = pathname.match(/^\/verify(?:\/([a-zA-Z0-9_-]+))?/);
+    if (matchVerify) {
+      if (matchVerify[1]) setVerifyHash(matchVerify[1]);
       setActiveNav('verify');
+      setView('app');
+    } else if (pathname === '/paid' || pathname.startsWith('/paid')) {
+      setActiveNav('paid');
       setView('app');
     }
 
@@ -39,11 +43,36 @@ const MainApp: React.FC = () => {
       window.history.pushState(null, '', hash ? `/verify/${hash}` : '/verify');
     };
 
+    const handleNavPaid = () => {
+      setActiveNav('paid');
+      setView('app');
+      window.history.pushState(null, '', '/paid');
+    };
+
+    const handlePopState = () => {
+      const currentPath = window.location.pathname;
+      if (currentPath === '/paid' || currentPath.startsWith('/paid')) {
+        setActiveNav('paid');
+        setView('app');
+      } else if (currentPath.startsWith('/verify')) {
+        const m = currentPath.match(/^\/verify(?:\/([a-zA-Z0-9_-]+))?/);
+        if (m && m[1]) setVerifyHash(m[1]);
+        setActiveNav('verify');
+        setView('app');
+      } else if (currentPath === '/' && view === 'app') {
+        // stay in app
+      }
+    };
+
     window.addEventListener('holdon:navigate-verify', handleNavVerify);
+    window.addEventListener('holdon:navigate-paid', handleNavPaid);
+    window.addEventListener('popstate', handlePopState);
     return () => {
       window.removeEventListener('holdon:navigate-verify', handleNavVerify);
+      window.removeEventListener('holdon:navigate-paid', handleNavPaid);
+      window.removeEventListener('popstate', handlePopState);
     };
-  }, []);
+  }, [view]);
 
   if (view === 'landing') {
     return (
@@ -56,6 +85,11 @@ const MainApp: React.FC = () => {
           onNavigateComplaint={() => {
             setActiveNav('complaints');
             setView('app');
+          }}
+          onNavigatePaid={() => {
+            setActiveNav('paid');
+            setView('app');
+            window.history.pushState(null, '', '/paid');
           }}
         />
         <Footer region={region} />
@@ -70,7 +104,11 @@ const MainApp: React.FC = () => {
       activeNav={activeNav}
       onNavChange={(tab) => {
         setActiveNav(tab);
-        if (tab !== 'verify' && window.location.pathname.startsWith('/verify')) {
+        if (tab === 'paid') {
+          window.history.pushState(null, '', '/paid');
+        } else if (tab === 'verify') {
+          window.history.pushState(null, '', verifyHash ? `/verify/${verifyHash}` : '/verify');
+        } else if (window.location.pathname.startsWith('/verify') || window.location.pathname === '/paid') {
           window.history.pushState(null, '', '/');
         }
       }}
@@ -83,6 +121,24 @@ const MainApp: React.FC = () => {
               onNavigateComplaint={(transcript, analysis) => {
                 setComplaintContext({ transcript, analysis });
                 setActiveNav('complaints');
+              }}
+            />
+          )}
+
+          {activeNav === 'paid' && (
+            <RecoveryGuidePage
+              region={region}
+              analysisSummary={complaintContext.analysis}
+              initialTranscript={complaintContext.transcript}
+              onNavigateComplaint={(transcript, analysis) => {
+                setComplaintContext({
+                  transcript: transcript ?? complaintContext.transcript,
+                  analysis: analysis ?? complaintContext.analysis,
+                });
+                setActiveNav('complaints');
+                if (window.location.pathname === '/paid') {
+                  window.history.pushState(null, '', '/');
+                }
               }}
             />
           )}

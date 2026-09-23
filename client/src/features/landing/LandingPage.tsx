@@ -1,5 +1,5 @@
 import { TACTIC_LABELS, TacticType } from '@holdon/shared';
-import { ArrowRight, Lock, Shield, Users } from 'lucide-react';
+import { ArrowRight, LifeBuoy, Lock, Shield, Users } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../../components/ui/Button.js';
 import { SAMPLE_SCRIPTS } from '../../data/samples.js';
@@ -7,11 +7,13 @@ import { SAMPLE_SCRIPTS } from '../../data/samples.js';
 interface LandingPageProps {
   onNavigateAnalyzer: () => void;
   onNavigateComplaint?: () => void;
+  onNavigatePaid?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onNavigateAnalyzer,
   onNavigateComplaint,
+  onNavigatePaid,
 }) => {
   // Orb glow state driven by sample conversation demo
   const [orbState, setOrbState] = useState<'safe' | 'warn' | 'alert'>('safe');
@@ -101,6 +103,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 File a complaint
               </Button>
             </div>
+
+            {onNavigatePaid && (
+              <div className="mt-4 pt-3 border-t border-border/40 max-w-md">
+                <button
+                  type="button"
+                  onClick={onNavigatePaid}
+                  className="text-xs text-muted hover:text-accent flex items-center gap-1.5 transition-colors group text-left"
+                >
+                  <LifeBuoy className="w-3.5 h-3.5 text-accent shrink-0" />
+                  <span>
+                    Already transferred money? Follow the{' '}
+                    <span className="underline font-medium text-text group-hover:text-accent">
+                      /paid recovery checklist
+                    </span>{' '}
+                    &rarr;
+                  </span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Right: CSS orb + sample card */}

@@ -39,6 +39,15 @@ export const Footer: React.FC<FooterProps> = ({ region }) => {
             >
               {pack.portalName} <ExternalLink className="w-3 h-3" />
             </a>
+            <div className="mt-2 pt-2 border-t border-border/50">
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('holdon:navigate-paid'))}
+                className="text-xs text-accent hover:underline inline-flex items-center gap-1 font-medium focus:outline-none"
+              >
+                Already paid? Recovery guide (/paid) &rarr;
+              </button>
+            </div>
           </div>
 
           <div>

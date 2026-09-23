@@ -118,6 +118,20 @@ export const StopOverlay: React.FC<StopOverlayProps> = ({
             </a>
           </div>
 
+          {/* Recovery Guide link if already paid */}
+          <div className="text-center pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                onDismiss();
+                window.dispatchEvent(new CustomEvent('holdon:navigate-paid'));
+              }}
+              className="text-xs text-red-200 hover:text-white underline inline-flex items-center gap-1 transition-colors"
+            >
+              Already paid money to the caller? Open /paid recovery checklist &rarr;
+            </button>
+          </div>
+
           {/* Actions */}
           <div className="pt-2 border-t border-border flex flex-wrap items-center justify-between gap-3">
             <Button

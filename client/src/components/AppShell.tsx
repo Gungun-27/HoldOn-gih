@@ -4,6 +4,7 @@ import {
   FileText,
   Globe,
   HelpCircle,
+  LifeBuoy,
   LogIn,
   LogOut,
   Search,
@@ -18,7 +19,7 @@ import { AuthModal } from './auth/AuthModal.js';
 import { OnboardingModal } from './onboarding/OnboardingModal.js';
 import { Button } from './ui/Button.js';
 
-export type ActiveNavTab = 'analyzer' | 'complaints' | 'track' | 'officer' | 'verify' | 'help' | 'settings';
+export type ActiveNavTab = 'analyzer' | 'paid' | 'complaints' | 'track' | 'officer' | 'verify' | 'help' | 'settings';
 
 interface AppShellProps {
   region: Region;
@@ -49,6 +50,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   const NAV_ITEMS: NavItem[] = [
     { id: 'analyzer', icon: <Search className="w-5 h-5" />, label: 'Analyzer' },
+    { id: 'paid', icon: <LifeBuoy className="w-5 h-5" />, label: 'Recovery' },
     { id: 'complaints', icon: <FileText className="w-5 h-5" />, label: 'Complaints' },
     { id: 'track', icon: <Shield className="w-5 h-5" />, label: 'Track' },
     { id: 'officer', icon: <ShieldAlert className="w-5 h-5" />, label: 'Officer', officerOnly: true },
