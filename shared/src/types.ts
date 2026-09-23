@@ -43,6 +43,7 @@ export interface AnalyzeResponse {
   tactics: TacticEvidence[];
   legit_signals: LegitSignal[];
   advice: string;
+  masked_input?: string; // FR-37: exact sanitized text sent to the LLM
 }
 
 export interface RegionHelpInfo {

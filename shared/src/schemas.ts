@@ -53,6 +53,7 @@ export const AnalyzeResponseSchema = z.object({
   tactics: z.array(TacticEvidenceSchema),
   legit_signals: z.array(GroqLegitSignalSchema),
   advice: z.string(),
+  masked_input: z.string().optional(),
 });
 
 export const ComplaintStatusSchema = z.enum([

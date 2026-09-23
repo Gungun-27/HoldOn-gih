@@ -97,6 +97,7 @@ analyzeRouter.post('/', async (req: Request, res: Response) => {
     tactics: verified.validTactics,
     legit_signals: verified.validLegitSignals,
     advice,
+    masked_input: maskedText, // FR-37: additive exact sanitized text sent to the LLM
   };
 
   return res.json(responsePayload);

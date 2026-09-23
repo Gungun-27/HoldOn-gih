@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maskPII } from '../masking.js';
+import { getMaskingFromText, maskPII } from '../masking.js';
 
 describe('PII Masking', () => {
   it('masks Aadhaar 12-digit patterns', () => {
@@ -38,5 +38,26 @@ describe('PII Masking', () => {
     expect(res.maskedText).toContain('[MASKED_DIGITS]');
     expect(res.maskedText).not.toContain('9876543210');
     expect(res.maskedText).not.toContain('9847291');
+  });
+
+  it('provides breakdown and summary of masked entities (FR-37)', () => {
+    const text = 'Pay 1000 to user@upi, reference 2026, call 9999999999, card 4111 2222 3333 4444.';
+    const res = maskPII(text);
+    expect(res.breakdown.upi).toBe(1);
+    expect(res.breakdown.cards).toBe(1);
+    expect(res.breakdown.phone).toBe(1);
+    expect(res.breakdown.digits).toBe(2); // 1000 and 2026
+    expect(res.maskedCount).toBe(5);
+    expect(res.summary).toContain('2 number sequences');
+    expect(res.summary).toContain('1 UPI ID');
+  });
+
+  it('reconstructs masking summary from masked text string (FR-37)', () => {
+    const maskedText = 'Transfer [MASKED_DIGITS] to [MASKED_UPI] within [MASKED_DIGITS] mins. Ref [MASKED_DIGITS] and [MASKED_DIGITS].';
+    const { totalCount, summary, breakdown } = getMaskingFromText(maskedText);
+    expect(totalCount).toBe(5);
+    expect(breakdown.digits).toBe(4);
+    expect(breakdown.upi).toBe(1);
+    expect(summary).toBe('4 number sequences, 1 UPI ID');
   });
 });

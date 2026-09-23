@@ -16,6 +16,7 @@ import { PressureTimeline, TimelinePoint } from './PressureTimeline.js';
 import { StopOverlay } from './StopOverlay.js';
 import { TacticList } from './TacticList.js';
 import { TranscriptViewer } from './TranscriptViewer.js';
+import { WhatWeSentPanel } from './WhatWeSentPanel.js';
 
 interface AnalyzerWorkspaceProps {
   region: Region;
@@ -179,6 +180,11 @@ export const AnalyzerWorkspace: React.FC<AnalyzerWorkspaceProps> = ({
             onSelectTactic={(type) => setActiveTacticType((prev) => (prev === type ? null : type))}
           />
           <PressureTimeline data={timelineData} />
+
+          {/* FR-37 "What we sent to the AI" panel */}
+          {latestResponse?.masked_input && (
+            <WhatWeSentPanel maskedInput={latestResponse.masked_input} />
+          )}
         </section>
 
         {/* Right: Gauge & Tactics */}
