@@ -29,31 +29,51 @@ DO $$ BEGIN
   END IF;
 END $$;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'profiles_insert_own' AND tablename = 'profiles') THEN
-    CREATE POLICY profiles_insert_own ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
-  END IF;
-END $$;
+-- Allow insert by owner or system/trigger (auth.uid() is null during auth trigger execution)
+DROP POLICY IF EXISTS profiles_insert_own ON profiles;
+CREATE POLICY profiles_insert_own ON profiles FOR INSERT WITH CHECK (
+  auth.uid() = id OR auth.uid() IS NULL
+);
+
+-- Ensure GoTrue auth admin and postgres have necessary privileges
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role, supabase_auth_admin;
+GRANT ALL ON TABLE public.profiles TO postgres, anon, authenticated, service_role, supabase_auth_admin;
 
 -- Auto-create profile on signup
-CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
+-- Fully qualified, SECURITY DEFINER with SET search_path = public, and EXCEPTION safe.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-  INSERT INTO profiles (id, name, role)
+  INSERT INTO public.profiles (id, name, role)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'name', 'Citizen'),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'user')
+    COALESCE(NULLIF(TRIM(NEW.raw_user_meta_data->>'name'), ''), 'Citizen'),
+    CASE
+      WHEN NEW.raw_user_meta_data->>'role' IN ('user', 'officer') THEN NEW.raw_user_meta_data->>'role'
+      ELSE 'user'
+    END
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    name = COALESCE(NULLIF(TRIM(EXCLUDED.name), ''), public.profiles.name),
+    role = COALESCE(EXCLUDED.role, public.profiles.role),
+    updated_at = now();
+
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Guard against any unexpected failure aborting auth.users creation
+  RAISE WARNING 'handle_new_user failed for user %: %', NEW.id, SQLERRM;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ============================================================
 -- 2. COMPLAINTS
@@ -195,15 +215,19 @@ CREATE INDEX IF NOT EXISTS idx_events_complaint_id ON complaint_events (complain
 -- Generates HLD-YYYY-NNNNNN with a sequence to avoid collisions
 CREATE SEQUENCE IF NOT EXISTS complaint_ref_seq START 100001;
 
-CREATE OR REPLACE FUNCTION generate_complaint_ref()
-RETURNS TEXT AS $$
+CREATE OR REPLACE FUNCTION public.generate_complaint_ref()
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
   seq_val BIGINT;
 BEGIN
   seq_val := nextval('complaint_ref_seq');
   RETURN 'HLD-' || EXTRACT(YEAR FROM now())::TEXT || '-' || LPAD(seq_val::TEXT, 6, '0');
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- ============================================================
 -- 5. AGGREGATE VIEW FOR MAP (P2, included for completeness)
