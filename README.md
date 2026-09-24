@@ -1,105 +1,48 @@
-# HoldOn
+HoldOn
 
-[![CI](https://github.com/gungunraut/HoldOn/actions/workflows/ci.yml/badge.svg)](https://github.com/gungunraut/HoldOn/actions/workflows/ci.yml)
+Hold on. Before you pay.
 
-> **Hold on. Before you pay.**  
-> Real-time pressure scoring and tactic analysis for scam calls and messages.
+A real-time scam-pressure detector. Paste a message, play a sample call, or use the live microphone, and HoldOn finds coercion tactics — fake authority, urgency, secrecy, legal threats, payment-channel switching, remote-access requests — and explains every score with an exact quote from the conversation, not a guess.
 
----
+The problem
 
-## 1. Overview & Problem
+Scams like "digital arrest" and fake KYC calls work by rushing the victim past the moment they'd normally stop and think. Caller-ID blocklists can't read what's actually being said, and bank SMS warnings arrive after the money is gone. Digital-arrest scams alone caused an estimated ₹1,935 crore in reported losses in India in 2024 (I4C data).
 
-Coercive impersonation scams (popularly known as "digital arrests", utility shutoff threats, or fake courier seizures) rely on artificial urgency, legal fear, and isolation to rush victims into transferring money before they have time to evaluate the situation rationally.
+What HoldOn does
+Analyzes the words, not the number. An LLM (Groq, Llama 3.3 70B) extracts coercion tactics from the conversation. Every tactic must quote exact text from the input, or it's dropped — the model can't invent evidence.
+Scores it deterministically. A separate, unit-tested risk engine combines tactic confidences (noisy-OR), applies an escalation bonus for multiple tactics, and produces a 0–100 score with hysteresis (WARN at 40, ALERT at 70) so the state doesn't flicker.
+Keeps working when the AI doesn't. An 8-second timeout falls back to a rule-based scorer with a visible "Degraded" badge — the meter never goes blank.
+Shows its work. A "What we sent to the AI" panel displays the exact masked text sent to the LLM, so the privacy claim is checkable, not just stated.
+Labels the scam type (digital arrest, KYC update, parcel scam, investment, lottery, job offer) and uses it to pre-fill a complaint category.
+Stops the user at ALERT with a full-screen view and the official helpline for their region (India: 1930, cybercrime.gov.in).
+Lets a user file and track a complaint — reference ID, status timeline (Submitted → Verified → Forwarded → Closed), an officer console to advance status, an email on every status change, and a downloadable report PDF with a SHA-256 hash that anyone can verify at a public /verify/:hash page.
+Has an "I already paid" recovery guide with cited, official steps — no invented helpline numbers.
+Lets users export or delete their own data, in line with DPDP rights.
+Privacy
+The conversation text you analyze is never stored or logged. It's processed and discarded.
+Digits, UPI IDs, and ID numbers are masked before anything is sent to the AI.
+The only thing ever saved to the database is what a user explicitly types into a complaint form, if they choose to file one — protected by row-level security, so users see only their own data and officers see the queue.
+Forwarding to any cyber-cell system is simulated for this demo and clearly labelled as such — nothing is sent to a real government system.
+Tech stack
 
-Conventional caller-ID and spam blocklists are ineffective against spoofed numbers or freshly provisioned VoIP lines. Bank SMS warnings typically arrive too late—after the funds have already left the account.
+React 18, Vite, TypeScript, Tailwind CSS, Radix UI · Express, Zod · Groq (Llama 3.3 70B) · Supabase (Auth, Postgres with RLS, Realtime) · Vitest · pnpm monorepo.
 
-**HoldOn** scores coercion and pressure tactics in scam communications as they happen, explains every score with verbatim quoted evidence, and enables the user to alert a trusted contact in one tap.
-
----
-
-## 2. Architecture (Phase P0)
-
-HoldOn is architected as a TypeScript monorepo using `pnpm` workspaces:
-
-```
-holdon/
-├── client/         # React 18 + Vite + Tailwind CSS + Radix UI + Framer Motion
-├── server/         # Node.js 20 + Express + Groq SDK + Helmet + Rate Limit
-├── shared/         # Pure deterministic risk engine, PII masking, Zod schemas, types
-├── .github/        # GitHub Actions CI workflow
-├── PRD.md          # Product Requirements Document
-├── DESIGN.md       # Design specifications and design tokens
-├── TECH_STACK.md   # Technology decisions and architectural rationale
-└── README.md
-```
-
-### Detection Pipeline (POST /api/analyze)
-
-1. **Input Normalization & PII Masking**: Deterministically strips credit/debit cards, Aadhaar numbers, phone digits, UPI IDs, and OTPs before any network call.
-2. **LLM Tactic Extraction**: Groq Llama 3.3 70B in JSON mode (`temperature: 0`). The LLM never returns a score—only extracted tactics, verbatim quotes, and advice.
-3. **Hard Timeout & Fallback Scorer**: If Groq exceeds 8 seconds or encounters an error, a rule-based multilingual keyword/regex scorer executes with `degraded: true`.
-4. **Zod Validation**: Ensures strict contract adherence before downstream processing.
-5. **Evidence Verification**: Verifies that every extracted tactic's `evidence` substring exists verbatim inside the masked input. Hallucinated quotes are dropped.
-6. **Pure Deterministic Risk Engine**:
-   - Individual tactic score: $s_i = \text{weight} \times \text{confidence}$
-   - Noisy-OR combination: $1 - \prod (1 - s_i)$, scaled to 0–100
-   - Escalation bonus (+10) when $\ge 3$ distinct tactics appear within 60 seconds
-   - Legitimate signals deduction (-15 each, floored at 0)
-   - Hysteresis state machine:
-     - `WARN`: enters $\ge 40$, clears $< 30$
-     - `ALERT`: enters $\ge 70$, clears $< 55$
-
----
-
-## 3. Privacy Model
-
-- **No Persistence**: The analyzer operates in guest mode without authentication. Audio transcripts, user inputs, and intermediate outputs are never persisted in databases or written to server logs.
-- **Strict PII Redaction**: Pino logger redacts request bodies, headers, and text payloads.
-- **Client-Side Storage**: Trusted guardian contact information is stored exclusively in the user's browser `localStorage`.
-
----
-
-## 4. Limitations & Non-Goals
-
-- **No Call Interception**: Mobile operating systems do not expose active telephone call audio streams to web apps. Capture is supported via live microphone listening, pasted text, or audio recordings.
-- **Simulated Forwarding**: Does not connect directly to government police servers.
-- **Web Speech API**: Live speech recognition is browser-dependent (optimized for Chromium browsers). For other browsers, paste and sample modes are always available.
-
----
-
-## 5. How to Run Locally
-
-### Prerequisites
-- Node.js 20+
-- pnpm 9+
-
-### Installation
-```bash
-# Install workspace dependencies
+Run it locally
+bash
 pnpm install
-```
-
-### Environment Configuration
-Copy `.env.example` to `server/.env` (or project root `.env`):
-```bash
-cp .env.example server/.env
-```
-
-Set your keys:
-- `GROQ_API_KEY`: *(Optional for basic testing)* If provided, HoldOn uses Groq's Llama 3.3 70B. If omitted or expired, HoldOn automatically operates in fallback mode with the `Degraded` badge visible.
-- `PORT`: `3001` (default Express port)
-- `ALLOWED_ORIGIN`: `http://localhost:5173`
-
-### Running Development Server
-```bash
-# Runs shared build, Express API (port 3001), and Vite client (port 5173)
+cp .env.example .env   # add your GROQ_API_KEY and Supabase keys
 pnpm dev
-```
 
-Open `http://localhost:5173` in your browser.
+Open http://localhost:5173.
 
-### Running Unit Tests
-```bash
-# Runs Vitest tests for risk engine, masking, and evidence verification
-pnpm test
-```
+Tests
+bash
+pnpm test    # risk engine, masking, evidence check, status machine, privacy
+pnpm build
+What's simulated / future scope
+Forwarding a verified complaint to a real cyber-cell system is simulated, not live.
+Live call capture uses speakerphone plus the browser's Web Speech API — phones don't expose raw call audio to apps.
+A benchmark with measured precision/recall, senior mode, screenshot scanning, a Telegram bot, and a PWA share target are designed (see PRD_P3.md) but not yet built.
+Origin
+
+An earlier, smaller version of HoldOn was first built during HackDevengers 2.0 (Sept 19–20, 2026). This version adds authentication, the complaint and tracking system, the officer console, email notifications, verified report PDFs, and the privacy-transparency features above.
