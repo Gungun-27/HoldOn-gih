@@ -43,6 +43,3 @@ What's simulated / future scope
 Forwarding a verified complaint to a real cyber-cell system is simulated, not live.
 Live call capture uses speakerphone plus the browser's Web Speech API — phones don't expose raw call audio to apps.
 A benchmark with measured precision/recall, senior mode, screenshot scanning, a Telegram bot, and a PWA share target are designed (see PRD_P3.md) but not yet built.
-Origin
-
-An earlier, smaller version of HoldOn was first built during HackDevengers 2.0 (Sept 19–20, 2026). This version adds authentication, the complaint and tracking system, the officer console, email notifications, verified report PDFs, and the privacy-transparency features above.
